@@ -4,6 +4,8 @@ use rdkafka::message::BorrowedMessage;
 use rdkafka::util::get_rdkafka_version;
 use futures::StreamExt;
 use rdkafka::Message;
+use dotenv::dotenv;
+use std::env;
 
 async fn consume_message(message: &BorrowedMessage<'_>) {
     let payload = match message.payload_view::<str>() {
@@ -26,9 +28,16 @@ async fn main() {
     let (version_n, version_s) = get_rdkafka_version();
     println!("rd_kafka_version: 0x{:08x}, {}", version_n, version_s);
 
+    dotenv().ok();
+
+    let kafka_server_url = env::var("KAFKA_SERVER_URL").unwrap_or_else(|_| {
+        println!("Warning: KAFKA_SERVER_URL is not set. Using localhost as default.");
+        "localhost:9092".to_string()
+    });
+
     let consumer: StreamConsumer = ClientConfig::new()
         .set("group.id", "example_consumer_group")
-        .set("bootstrap.servers", "localhost:9092")
+        .set("bootstrap.servers", kafka_server_url)
         .set("enable.partition.eof", "false")
         .set("auto.offset.reset", "earliest")
         .create()
